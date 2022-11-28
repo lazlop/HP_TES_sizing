@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-from datetime import datetime, timedelta, date, time
-import matplotlib.dates as mdates
+from datetime import datetime
+from warnings import warn
 
 from scipy.integrate import trapz
 
@@ -81,12 +81,17 @@ class HPsizer():
             )
         return df_day
 
-    def get_period(self, df, period):
-        if period[0] > period[1]:
-            return df.loc[(df.index >= time(period[0])) | (df.index < time(period[1])), self.value_col]
+    def get_period(self, df, period): # takes time in format 9:30
+        st = self.format_time(period[0])
+        et = self.format_time(period[1])
+        if st > et:
+            return df.loc[(df.index >= st) | (df.index < et), self.value_col]
         else:
-            return df.loc[time(period[0]): time(period[1]), self.value_col]
+            return df.loc[st:et, self.value_col]
         #should have error if period is the same hour
+
+    def format_time(self, str_time):
+        return datetime.strptime(str_time, '%H:%M').time()
 
     def _tes_size(self, hp_size):
         # should add something to make sure load is ALWAYS satisfied
@@ -182,19 +187,21 @@ class HPsizer():
              
 
     def parse_val_string(self, str_val):
-        if str(str_val).isnumeric():
-            raise(Warning('no units supplied, assuming W'))
+        try: 
+            float(str_val)
+            warn('no units supplied, assuming W')
             return float(str_val)
-        str_splt = str_val.split(' ')
-        if str_splt[1] == 'kW':
-            return float(str_splt[0])
-        elif str_splt[1] == 'W':
-            return float(str_splt[0])/1000
-        elif str_splt[1] == 'mW':
-            return float(str_splt[0])/1000000
-        elif str_splt[1] == 'µW':
-            return float(str_splt[0])/1000000000  
-        else:
-            print(str_val)
-            #return 0 
-            raise(Exception('not kW or W or mW or µW'))
+        except:
+            str_splt = str_val.split(' ')
+            if str_splt[1] == 'kW':
+                return float(str_splt[0])
+            elif str_splt[1] == 'W':
+                return float(str_splt[0])/1000
+            elif str_splt[1] == 'mW':
+                return float(str_splt[0])/1000000
+            elif str_splt[1] == 'µW':
+                return float(str_splt[0])/1000000000  
+            else:
+                print(str_val)
+                #return 0 
+                raise(Exception('not kW or W or mW or µW'))
